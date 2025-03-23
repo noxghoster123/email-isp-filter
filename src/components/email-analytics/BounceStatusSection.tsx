@@ -33,7 +33,10 @@ const BounceStatusSection: React.FC<BounceStatusSectionProps> = ({
               <MailCheck className="w-4 h-4 mr-2 text-green-500" />
               <span className="text-sm font-medium">Valid</span>
             </div>
-            <Badge variant="outline" className="bg-green-50">{data.bounceStatus.valid}</Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="bg-green-50">{data.bounceStatus.valid}</Badge>
+              <span className="text-xs text-gray-500">{validPercent.toFixed(1)}%</span>
+            </div>
           </div>
           <Progress value={validPercent} className="h-2 bg-gray-100" indicatorClassName="bg-green-500" />
         </div>
@@ -44,7 +47,10 @@ const BounceStatusSection: React.FC<BounceStatusSectionProps> = ({
               <MailX className="w-4 h-4 mr-2 text-red-500" />
               <span className="text-sm font-medium">Bounced</span>
             </div>
-            <Badge variant="outline" className="bg-red-50">{data.bounceStatus.bounced}</Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="bg-red-50">{data.bounceStatus.bounced}</Badge>
+              <span className="text-xs text-gray-500">{bouncedPercent.toFixed(1)}%</span>
+            </div>
           </div>
           <Progress value={bouncedPercent} className="h-2 bg-gray-100" indicatorClassName="bg-red-500" />
         </div>
@@ -55,7 +61,10 @@ const BounceStatusSection: React.FC<BounceStatusSectionProps> = ({
               <MailQuestion className="w-4 h-4 mr-2 text-gray-500" />
               <span className="text-sm font-medium">Unknown</span>
             </div>
-            <Badge variant="outline" className="bg-gray-100">{data.bounceStatus.unknown}</Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="bg-gray-100">{data.bounceStatus.unknown}</Badge>
+              <span className="text-xs text-gray-500">{unknownPercent.toFixed(1)}%</span>
+            </div>
           </div>
           <Progress value={unknownPercent} className="h-2 bg-gray-100" indicatorClassName="bg-gray-400" />
         </div>

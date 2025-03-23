@@ -15,21 +15,27 @@ const Index = () => {
 
   const handleFileLoaded = async (content: string) => {
     try {
+      // Step 1: Initialize processing state
       setIsProcessing(true);
       setProcessingProgress(0);
       setProcessingStatus('Parsing email data...');
       
+      // Step 2: Extract emails from the uploaded file
       const emailData = parseEmailFile(content);
       
+      // Step 3: Validate we have emails to process
       if (emailData.length === 0) {
         toast.error("No valid email data found in the file");
         setIsProcessing(false);
         return;
       }
       
-      toast.info(`Processing ${emailData.length} emails and checking bounce status...`);
-      setProcessingStatus(`Preparing to check ${emailData.length} emails...`);
+      // Step 4: Show extraction complete message
+      toast.info(`Extracted ${emailData.length} emails. Now checking bounce status...`);
+      setProcessingStatus(`Email extraction complete. Starting bounce check for ${emailData.length} emails...`);
+      setProcessingProgress(0); // Reset progress for bounce checking phase
       
+      // Step 5: Process emails and check bounce status with progress updates
       const result = await processEmails(emailData, (progress, status) => {
         setProcessingProgress(progress);
         setProcessingStatus(status);
