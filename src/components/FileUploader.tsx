@@ -7,12 +7,14 @@ interface FileUploaderProps {
   onFileLoaded: (content: string) => void;
   accept?: string;
   maxSize?: number;
+  isDisabled?: boolean;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({ 
   onFileLoaded, 
   accept = '.txt', 
-  maxSize = 5 // MB
+  maxSize = 5, // MB
+  isDisabled = false
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -73,11 +75,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     e.stopPropagation();
     setIsDragging(false);
     
+    if (isDisabled) return;
+    
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       processFile(file);
     }
-  }, [processFile]);
+  }, [processFile, isDisabled]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -87,10 +91,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   }, [processFile]);
 
   const handleButtonClick = useCallback(() => {
-    if (fileInputRef.current) {
+    if (fileInputRef.current && !isDisabled) {
       fileInputRef.current.click();
     }
-  }, []);
+  }, [isDisabled]);
 
   const handleRemoveFile = useCallback(() => {
     setFile(null);
@@ -109,7 +113,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           "border-2 border-dashed rounded-xl p-8 transition-all duration-200 animate-fade-in",
           "flex flex-col items-center justify-center text-center",
           isDragging ? "border-primary bg-primary/5" : "border-gray-200 hover:border-primary/50",
-          file ? "bg-secondary/30" : "bg-white/50 backdrop-blur-sm"
+          file ? "bg-secondary/30" : "bg-white/50 backdrop-blur-sm",
+          isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         )}
       >
         <input
@@ -118,6 +123,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           onChange={handleFileChange}
           accept={accept}
           className="hidden"
+          disabled={isDisabled}
         />
         
         {isLoading ? (
@@ -137,6 +143,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             <button 
               onClick={handleRemoveFile}
               className="text-sm text-red-500 flex items-center hover:underline"
+              disabled={isDisabled}
             >
               <X size={16} className="mr-1" /> Remove file
             </button>
@@ -152,7 +159,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             </p>
             <button
               onClick={handleButtonClick}
-              className="btn-primary"
+              className={`btn-primary ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isDisabled}
             >
               Select File
             </button>

@@ -1,12 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { ChartPie, BarChart2, Filter, Download } from 'lucide-react';
+import { ChartPie, BarChart2, Filter, Download, MailCheck, MailX, MailQuestion } from 'lucide-react';
 import { ISPCount, filterEmailsByISP, downloadAsTextFile, EmailProcessingResult } from '@/utils/emailUtils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 
 interface EmailAnalyticsProps {
   data: EmailProcessingResult | null;
@@ -16,17 +18,14 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ data }) => {
   const [selectedISPs, setSelectedISPs] = useState<string[]>([]);
   const [filteredEmails, setFilteredEmails] = useState<string[]>([]);
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+  const [includeBounced, setIncludeBounced] = useState(true);
 
   useEffect(() => {
     if (data) {
-      if (selectedISPs.length === 0) {
-        setFilteredEmails(data.filteredEmails);
-      } else {
-        const filtered = filterEmailsByISP(data.allEmails, selectedISPs);
-        setFilteredEmails(filtered);
-      }
+      const filtered = filterEmailsByISP(data.allEmails, selectedISPs, includeBounced);
+      setFilteredEmails(filtered);
     }
-  }, [data, selectedISPs]);
+  }, [data, selectedISPs, includeBounced]);
 
   const handleISPToggle = (isp: string) => {
     setSelectedISPs(prev => {
@@ -79,8 +78,63 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ data }) => {
     return null;
   };
 
+  // Calculate bounce status percentages
+  const validPercent = (data.bounceStatus.valid / data.totalEmails) * 100;
+  const bouncedPercent = (data.bounceStatus.bounced / data.totalEmails) * 100;
+  const unknownPercent = (data.bounceStatus.unknown / data.totalEmails) * 100;
+
   return (
     <div className="w-full animate-fade-in">
+      <div className="card-glass rounded-xl p-6 mb-6">
+        <h3 className="text-lg font-medium mb-4">Email Bounce Status</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="flex flex-col space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <MailCheck className="w-4 h-4 mr-2 text-green-500" />
+                <span className="text-sm font-medium">Valid</span>
+              </div>
+              <Badge variant="outline" className="bg-green-50">{data.bounceStatus.valid}</Badge>
+            </div>
+            <Progress value={validPercent} className="h-2 bg-gray-100" indicatorClassName="bg-green-500" />
+          </div>
+          
+          <div className="flex flex-col space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <MailX className="w-4 h-4 mr-2 text-red-500" />
+                <span className="text-sm font-medium">Bounced</span>
+              </div>
+              <Badge variant="outline" className="bg-red-50">{data.bounceStatus.bounced}</Badge>
+            </div>
+            <Progress value={bouncedPercent} className="h-2 bg-gray-100" indicatorClassName="bg-red-500" />
+          </div>
+          
+          <div className="flex flex-col space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <MailQuestion className="w-4 h-4 mr-2 text-gray-500" />
+                <span className="text-sm font-medium">Unknown</span>
+              </div>
+              <Badge variant="outline" className="bg-gray-100">{data.bounceStatus.unknown}</Badge>
+            </div>
+            <Progress value={unknownPercent} className="h-2 bg-gray-100" indicatorClassName="bg-gray-400" />
+          </div>
+        </div>
+        
+        <div className="mt-4 flex items-center">
+          <Checkbox
+            id="include-bounced"
+            checked={includeBounced}
+            onCheckedChange={(checked) => setIncludeBounced(checked as boolean)}
+          />
+          <label htmlFor="include-bounced" className="ml-2 text-sm cursor-pointer">
+            Include bounced emails in filters and downloads
+          </label>
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
         <div className="md:col-span-2 card-glass rounded-xl p-6">
           <div className="flex justify-between items-center mb-4">
@@ -196,7 +250,7 @@ const EmailAnalytics: React.FC<EmailAnalyticsProps> = ({ data }) => {
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm text-gray-500">
                 {selectedISPs.length === 0 
-                  ? `All ${data.totalEmails} emails selected` 
+                  ? `All ${filteredEmails.length} emails selected` 
                   : `${filteredEmails.length} of ${data.totalEmails} emails selected`}
               </span>
             </div>

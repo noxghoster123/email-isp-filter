@@ -2,6 +2,7 @@
 type EmailData = {
   email: string;
   password: string;
+  bounceStatus?: 'valid' | 'bounced' | 'unknown';
 };
 
 export type ISPCount = {
@@ -15,6 +16,11 @@ export type EmailProcessingResult = {
   totalEmails: number;
   filteredEmails: string[];
   allEmails: EmailData[];
+  bounceStatus: {
+    valid: number;
+    bounced: number;
+    unknown: number;
+  };
 };
 
 // ISP color mapping for consistent colors in the chart
@@ -67,7 +73,11 @@ export const parseEmailFile = (content: string): EmailData[] => {
       const password = parts.slice(1).join(':').trim();
       
       if (validateEmail(email)) {
-        emailData.push({ email, password });
+        emailData.push({ 
+          email, 
+          password,
+          bounceStatus: 'unknown' 
+        });
       }
     }
   });
@@ -75,15 +85,55 @@ export const parseEmailFile = (content: string): EmailData[] => {
   return emailData;
 };
 
-export const processEmails = (emailData: EmailData[]): EmailProcessingResult => {
+export const checkEmailBounce = async (email: string): Promise<'valid' | 'bounced' | 'unknown'> => {
+  // In a real application, this would connect to an email verification API
+  // For demonstration purposes, we'll simulate results based on patterns
+  try {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Deterministic simulation based on email characteristics
+    // This is just for demonstration - in a real app you'd call an actual API
+    if (email.includes('bounce') || email.includes('invalid') || email.includes('test')) {
+      return 'bounced';
+    }
+    
+    // Simple hash-based simulation to get consistent but distributed results
+    const emailHash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    // Make most emails valid, but some bounced for demo purposes
+    return emailHash % 10 === 0 ? 'bounced' : 'valid';
+  } catch (error) {
+    console.error("Error checking email bounce status:", error);
+    return 'unknown';
+  }
+};
+
+export const processEmails = async (emailData: EmailData[]): Promise<EmailProcessingResult> => {
   const ispCounts: Record<string, number> = {};
   const filteredEmails: string[] = [];
+  const bounceStatus = { valid: 0, bounced: 0, unknown: 0 };
   
+  // First pass - count ISPs
   emailData.forEach(({ email }) => {
     const isp = getISPFromEmail(email);
     ispCounts[isp] = (ispCounts[isp] || 0) + 1;
     filteredEmails.push(email);
   });
+  
+  // Second pass - check bounce status (in batches to avoid rate limiting)
+  const batchSize = 10;
+  const updatedEmailData = [...emailData];
+
+  for (let i = 0; i < updatedEmailData.length; i += batchSize) {
+    const batch = updatedEmailData.slice(i, i + batchSize);
+    
+    // Process batch in parallel
+    await Promise.all(batch.map(async (data, index) => {
+      const status = await checkEmailBounce(data.email);
+      updatedEmailData[i + index].bounceStatus = status;
+      bounceStatus[status] += 1;
+    }));
+  }
   
   const result: ISPCount[] = Object.entries(ispCounts)
     .map(([name, count]) => ({
@@ -97,18 +147,26 @@ export const processEmails = (emailData: EmailData[]): EmailProcessingResult => 
     ispCounts: result,
     totalEmails: emailData.length,
     filteredEmails,
-    allEmails: emailData
+    allEmails: updatedEmailData,
+    bounceStatus
   };
 };
 
 export const filterEmailsByISP = (
   emailData: EmailData[], 
-  selectedISPs: string[]
+  selectedISPs: string[],
+  includeBounced: boolean = false
 ): string[] => {
-  if (!selectedISPs.length) return emailData.map(data => data.email);
+  if (!selectedISPs.length && includeBounced) {
+    return emailData.map(data => data.email);
+  }
   
   return emailData
-    .filter(({ email }) => selectedISPs.includes(getISPFromEmail(email)))
+    .filter(({ email, bounceStatus }) => {
+      const ispMatch = selectedISPs.length === 0 || selectedISPs.includes(getISPFromEmail(email));
+      const bounceMatch = includeBounced || bounceStatus !== 'bounced';
+      return ispMatch && bounceMatch;
+    })
     .map(data => data.email);
 };
 
