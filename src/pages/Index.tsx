@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import FileUploader from '@/components/FileUploader';
 import EmailAnalytics from '@/components/EmailAnalytics';
 import Header from '@/components/Header';
