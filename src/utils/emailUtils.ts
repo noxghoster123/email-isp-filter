@@ -1,4 +1,3 @@
-
 type EmailData = {
   email: string;
   password: string;
@@ -108,7 +107,10 @@ export const checkEmailBounce = async (email: string): Promise<'valid' | 'bounce
   }
 };
 
-export const processEmails = async (emailData: EmailData[]): Promise<EmailProcessingResult> => {
+export const processEmails = async (
+  emailData: EmailData[],
+  onProgress?: (progress: number, status: string) => void
+): Promise<EmailProcessingResult> => {
   const ispCounts: Record<string, number> = {};
   const filteredEmails: string[] = [];
   const bounceStatus = { valid: 0, bounced: 0, unknown: 0 };
@@ -123,6 +125,7 @@ export const processEmails = async (emailData: EmailData[]): Promise<EmailProces
   // Second pass - check bounce status (in batches to avoid rate limiting)
   const batchSize = 10;
   const updatedEmailData = [...emailData];
+  const totalEmails = updatedEmailData.length;
 
   for (let i = 0; i < updatedEmailData.length; i += batchSize) {
     const batch = updatedEmailData.slice(i, i + batchSize);
@@ -132,6 +135,13 @@ export const processEmails = async (emailData: EmailData[]): Promise<EmailProces
       const status = await checkEmailBounce(data.email);
       updatedEmailData[i + index].bounceStatus = status;
       bounceStatus[status] += 1;
+      
+      // Report progress
+      if (onProgress) {
+        const processedCount = Math.min(i + index + 1, totalEmails);
+        const progressPercent = Math.floor((processedCount / totalEmails) * 100);
+        onProgress(progressPercent, `Checking email ${processedCount}/${totalEmails}`);
+      }
     }));
   }
   

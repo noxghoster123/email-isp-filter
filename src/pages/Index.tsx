@@ -5,14 +5,20 @@ import FileUploader from '@/components/FileUploader';
 import EmailAnalytics from '@/components/EmailAnalytics';
 import Header from '@/components/Header';
 import { parseEmailFile, processEmails, EmailProcessingResult } from '@/utils/emailUtils';
+import { Progress } from '@/components/ui/progress';
 
 const Index = () => {
   const [processingResult, setProcessingResult] = useState<EmailProcessingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState('');
 
   const handleFileLoaded = async (content: string) => {
     try {
       setIsProcessing(true);
+      setProcessingProgress(0);
+      setProcessingStatus('Parsing email data...');
+      
       const emailData = parseEmailFile(content);
       
       if (emailData.length === 0) {
@@ -22,8 +28,13 @@ const Index = () => {
       }
       
       toast.info(`Processing ${emailData.length} emails and checking bounce status...`);
+      setProcessingStatus(`Preparing to check ${emailData.length} emails...`);
       
-      const result = await processEmails(emailData);
+      const result = await processEmails(emailData, (progress, status) => {
+        setProcessingProgress(progress);
+        setProcessingStatus(status);
+      });
+      
       setProcessingResult(result);
       
       const validCount = result.bounceStatus.valid;
@@ -64,8 +75,15 @@ const Index = () => {
             {isProcessing && (
               <div className="mt-6 text-center">
                 <div className="inline-block w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin-slow"></div>
-                <p className="mt-3 text-gray-600">Checking email validity and bouncing status...</p>
-                <p className="mt-1 text-sm text-gray-500">This may take a moment for large files</p>
+                <p className="mt-3 text-gray-600">{processingStatus}</p>
+                <div className="mt-4 w-full max-w-md mx-auto">
+                  <Progress 
+                    value={processingProgress} 
+                    className="h-2 bg-gray-100" 
+                    indicatorClassName="bg-blue-500"
+                  />
+                  <p className="mt-2 text-sm text-gray-500">{processingProgress}% complete</p>
+                </div>
               </div>
             )}
           </div>
